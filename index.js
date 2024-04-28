@@ -19,15 +19,33 @@ app.get('/api/flavors', async (req, res, next) => {
     }
 });
 
+// READ a single flavor by ID
+app.get('/api/flavors/:id', async (req, res, next) => {
+    try {
+        const flavorId = req.params.id;
+        const SQL = `SELECT * FROM flavors WHERE id = $1`;
+        const response = await client.query(SQL, [flavorId]);
+        if (response.rows.length === 0) {
+            res.status(404).send('Flavor not found');
+        } else {
+            res.send(response.rows[0]);
+        }
+    } catch (error) {
+        next(error);
+    }
+});
+
+
 //CREATE
 app.post('/api/flavors', async (req, res, next) => {
     try {
+
         const SQL = /* sql */`
-       INSERT INTO flavors(txt, ranking)
-       VALUES($1, 2)
+       INSERT INTO flavors(name, is_favorite)
+       VALUES($1, $2)
        RETURNING *
        `;
-        const response = await client.query(SQL, [req.body.txt, req.body.ranking]);
+        const response = await client.query(SQL, [req.body.name, req.body.is_favorite]);
         res.send(response.rows[0]);
     } catch (error) {
         next(error);
@@ -38,13 +56,13 @@ app.put('/api/flavors/:id', async (req, res, next) => {
     try {
         const SQL = `
         UPDATE flavors
-        SET txt=$1, ranking=$2, updated_at=now()
+        SET name=$1, is_favorite=$2, updated_at=now()
         WHERE id=$3
         RETURNING *
         `;
         const response = await client.query(SQL, [
-            req.body.txt,
-            req.body.ranking,
+            req.body.name,
+            req.body.is_favorite,
             req.params.id,
         ]);
         res.send(response.rows[0]);
@@ -76,17 +94,17 @@ const init = async () => {
         id SERIAL PRIMARY KEY,
         created_at TIMESTAMP DEFAULT now(),
         updated_at TIMESTAMP DEFAULT now(),
-        ranking INTEGER DEFAULT 3 NOT NULL,
-        txt VARCHAR(255)
+        is_favorite INTEGER DEFAULT 3 NOT NULL,
+        name VARCHAR(255)
     )
     `;
     await client.query(SQL);
     console.log("tables created");
 
     SQL = /* sql */`
-    INSERT INTO flavors(txt) VALUES('Chocolate Mint Icecream Mountain');
-    INSERT INTO flavors(txt, ranking) VALUES('Dulce De Leche Suprise', 5);
-    INSERT INTO flavors(txt) VALUES ('Guava Passion Gelato');
+    INSERT INTO flavors(name) VALUES('Chocolate Mint Icecream Mountain');
+    INSERT INTO flavors(name, is_favorite) VALUES('Dulce De Leche Suprise', 5);
+    INSERT INTO flavors(name) VALUES ('Guava Passion Gelato');
     `;
 
     await client.query(SQL);
